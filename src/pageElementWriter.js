@@ -71,6 +71,11 @@ PageElementWriter.prototype.addFragment = function (fragment, useBlockXOffset, u
 
 PageElementWriter.prototype.moveToNextPage = function (pageOrientation) {
 
+  this.writer.tracker.emit('pageWillChange', {
+		currentPage: this.writer.context.getCurrentPage(),
+		y: this.writer.context.y
+	});
+
 	var nextPage = this.writer.context.moveToNextPage(pageOrientation);
 
 	// moveToNextPage is called multiple times for table, because is called for each column

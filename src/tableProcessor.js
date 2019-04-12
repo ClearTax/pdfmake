@@ -145,7 +145,7 @@ TableProcessor.prototype.beginRow = function (rowIndex, writer) {
 	writer.context().moveDown(this.rowPaddingTop);
 };
 
-TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY) {
+TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overrideY, pageBroken) {
 	var lineWidth = this.layout.hLineWidth(lineIndex, this.tableNode);
 	if (lineWidth) {
 		var style = this.layout.hLineStyle(lineIndex, this.tableNode);
@@ -189,7 +189,7 @@ TableProcessor.prototype.drawHorizontalLine = function (lineIndex, writer, overr
 					}
 				}
 
-				shouldDrawLine = topBorder || bottomBorder;
+				shouldDrawLine = pageBroken || topBorder || bottomBorder;
 			}
 
 			if (cellAbove && cellAbove._rowSpanCurrentOffset) {
@@ -442,10 +442,10 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 		}
 
 		if (willBreak && this.layout.hLineWhenBroken !== false) {
-			this.drawHorizontalLine(rowIndex + 1, writer, y2);
+			this.drawHorizontalLine(rowIndex + 1, writer, y2, true);
 		}
 		if (rowBreakWithoutHeader && this.layout.hLineWhenBroken !== false) {
-			this.drawHorizontalLine(rowIndex, writer, y1);
+			this.drawHorizontalLine(rowIndex, writer, y1, true);
 		}
 	}
 
@@ -483,15 +483,24 @@ TableProcessor.prototype.endRow = function (rowIndex, writer, pageBreaks) {
 	}
 
 	if (this.dontBreakRows) {
-		writer.tracker.auto('pageChanged',
+		writer.tracker.auto('pageWillChange',
+				function (context) {
+					if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
+						self.drawHorizontalLine(rowIndex - 1, writer, null, true);
+					}
+				},
+				function () {
+					writer.tracker.auto('pageChanged',
 						function () {
 							if (!self.headerRows && self.layout.hLineWhenBroken !== false) {
-								self.drawHorizontalLine(rowIndex, writer);
+								self.drawHorizontalLine(rowIndex, writer, null, true);
 							}
 						},
 						function () {
 							writer.commitUnbreakableBlock();
 						}
+					);
+				}
 		);
 	}
 
