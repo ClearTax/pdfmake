@@ -1,5 +1,7 @@
 'use strict';
 
+var fs = require('fs');
+
 function ImageMeasure(pdfKitDoc, imageDictionary) {
 	this.pdfKitDoc = pdfKitDoc;
 	this.imageDictionary = imageDictionary || {};
@@ -12,11 +14,11 @@ ImageMeasure.prototype.measureImage = function (src) {
 	if (!this.pdfKitDoc._imageRegistry[src]) {
 		try {
 			image = this.pdfKitDoc.openImage(realImageSrc(src));
+			if (!image) {
+				throw 'No image';
+			}
 		} catch (error) {
-			image = null;
-		}
-		if (image === null || image === undefined) {
-			throw 'invalid image, images dictionary should contain dataURL entries (or local file paths in node.js)';
+			throw 'Invalid image: ' + error.toString() + '\nImages dictionary should contain dataURL entries (or local file paths in node.js)';
 		}
 		image.embed(this.pdfKitDoc);
 		this.pdfKitDoc._imageRegistry[src] = image;
@@ -24,13 +26,17 @@ ImageMeasure.prototype.measureImage = function (src) {
 		image = this.pdfKitDoc._imageRegistry[src];
 	}
 
-	return {width: image.width, height: image.height};
+	return { width: image.width, height: image.height };
 
 	function realImageSrc(src) {
 		var img = that.imageDictionary[src];
 
 		if (!img) {
 			return src;
+		}
+
+		if (fs.existsSync(img)) {
+			return fs.readFileSync(img);
 		}
 
 		var index = img.indexOf('base64,');

@@ -1,4 +1,5 @@
 var path = require('path');
+var TerserPlugin = require('terser-webpack-plugin');
 var StringReplacePlugin = require("string-replace-webpack-plugin");
 var webpack = require('webpack');
 var pkg = require('./package.json');
@@ -6,6 +7,7 @@ var pkg = require('./package.json');
 var banner = '/*! ' + pkg.name + ' v' + pkg.version + ', @license ' + pkg.license + ', @link ' + pkg.homepage + ' */';
 
 module.exports = {
+	mode: 'production',
 	entry: {
 		'pdfmake': './src/browser-extensions/pdfMake.js',
 		'pdfmake.min': './src/browser-extensions/pdfMake.js'
@@ -13,7 +15,9 @@ module.exports = {
 	output: {
 		path: path.join(__dirname, './build'),
 		filename: '[name].js',
-		libraryTarget: 'umd'
+		libraryTarget: 'umd',
+		// Workaround https://github.com/webpack/webpack/issues/6642 until https://github.com/webpack/webpack/issues/6525 lands.
+		globalObject: `typeof self !== 'undefined' ? self : this`
 	},
 	resolve: {
 		alias: {
@@ -38,11 +42,12 @@ module.exports = {
 								return "var fs = require('fs');";
 							}
 						}
-					]})
+					]
+				})
 			},
 			{
 				test: /\.js$/,
-				include: /(pdfkit|saslprep)/,
+				include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|png-js)/,
 				use: {
 					loader: 'babel-loader',
 					options: {
@@ -55,6 +60,8 @@ module.exports = {
 									},
 									modules: false,
 									useBuiltIns: 'usage',
+									// TODO: after fix in babel remove corejs version and remove core-js dependency in package.json
+									corejs: "3.0.0",
 									loose: true
 								}
 							]
@@ -63,58 +70,19 @@ module.exports = {
 					}
 				}
 			},
-			{test: /pdfMake.js$/, loader: 'expose-loader?pdfMake', include: [path.join(__dirname, './src/browser-extensions')]},
-
-			/* Can be removed after new pdfkit release */
-			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/934 */
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: 'return this.font(\'Helvetica\');',
-							replacement: function () {
-								return '';
-							}
-						}
-					]})
+			{
+				test: /pdfMake.js$/,
+				loader: 'expose-loader',
+				options: {
+					exposes: 'pdfMake',
+				},
+				include: [path.join(__dirname, './src/browser-extensions')]
 			},
-			{test: /fontkit[/\\]index.js$/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: /fs\./g,
-							replacement: function () {
-								return 'require(\'fs\').';
-							}
-						}
-					]})
-			},
-
-			/* temporary bugfix for pdfkit version 0.9.0 - issue https://github.com/foliojs/pdfkit/issues/923 */
-			/* waiting to release included PR https://github.com/foliojs/pdfkit/pull/925 */
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: "stringBuffer = swapBytes(new Buffer(",
-							replacement: function () {
-								return "stringBuffer = swapBytes(Buffer.from(";
-							}
-						}
-					]})
-			},
-			{test: /pdfkit[/\\]js[/\\]/, loader: StringReplacePlugin.replace({
-					replacements: [
-						{
-							pattern: "stringBuffer = new Buffer(string, 'ascii');",
-							replacement: function () {
-								return "stringBuffer = Buffer.from(string.valueOf(), 'ascii');";
-							}
-						}
-					]})
-			},
-			/* *** */
 
 			/* temporary bugfix for FileSaver: added hack for mobile device support, see https://github.com/bpampuch/pdfmake/issues/1664 */
 			/* waiting to merge and release PR https://github.com/eligrey/FileSaver.js/pull/533 */
-			{test: /FileSaver.min.js$/, loader: StringReplacePlugin.replace({
+			{
+				test: /FileSaver.min.js$/, loader: StringReplacePlugin.replace({
 					replacements: [
 						{
 							pattern: '"download"in HTMLAnchorElement.prototype',
@@ -122,30 +90,41 @@ module.exports = {
 								return '(typeof HTMLAnchorElement !== "undefined" && "download" in HTMLAnchorElement.prototype)';
 							}
 						}
-					]})
+					]
+				})
 			},
 
-			{enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs"},
-			{enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs"},
-			{enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs"}
+			{ enforce: 'post', test: /fontkit[/\\]index.js$/, loader: "transform-loader?brfs" },
+			{ enforce: 'post', test: /unicode-properties[/\\]index.js$/, loader: "transform-loader?brfs" },
+			{ enforce: 'post', test: /linebreak[/\\]src[/\\]linebreaker.js/, loader: "transform-loader?brfs" }
+		]
+	},
+	optimization: {
+		minimizer: [
+			new TerserPlugin({
+				include: /\.min\.js$/,
+				sourceMap: true,
+				extractComments: false,
+				terserOptions: {
+					format: {
+						preamble: banner,
+						comments: false,
+					},
+					output: {
+						preamble: banner,
+						comments: false,
+					},
+					compress: {
+						drop_console: true
+					},
+					keep_classnames: true,
+					keep_fnames: true
+				}
+			})
 		]
 	},
 	plugins: [
 		new StringReplacePlugin(),
-
-		new webpack.optimize.UglifyJsPlugin({
-			include: /\.min\.js$/,
-			sourceMap: true,
-			uglifyOptions: {
-				compress: {
-					drop_console: true
-				},
-				mangle: {
-					reserved: ['HeadTable', 'NameTable', 'CmapTable', 'HheaTable', 'MaxpTable', 'HmtxTable', 'PostTable', 'OS2Table', 'LocaTable', 'GlyfTable']
-				}
-			}
-		}),
-
 		new webpack.BannerPlugin({
 			banner: banner,
 			raw: true

@@ -1,4 +1,7 @@
-# pdfmake [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+# pdfmake [![Node.js CI][githubactions_img]][githubactions_url] [![Build Status][travis_img]][travis_url] [![GitHub][github_img]][github_url] [![npm][npm_img]][npm_url] [![Bower][bower_img]][bower_url] [![Packagist][packagist_img]][packagist_url] [![CDNJS][cdnjs_img]][cndjs_url]
+
+[githubactions_img]: https://github.com/bpampuch/pdfmake/workflows/Node.js%20CI/badge.svg?branch=0.1
+[githubactions_url]: https://github.com/bpampuch/pdfmake/actions
 
 [travis_img]: https://travis-ci.org/bpampuch/pdfmake.svg?branch=master
 [travis_url]: https://travis-ci.org/bpampuch/pdfmake
@@ -19,7 +22,7 @@
 [cndjs_url]: https://cdnjs.com/libraries/pdfmake
 
 
-Client/server side PDF printing in pure JavaScript
+PDF document generation library for server-side and client-side usage in pure JavaScript.
 
 Check out [the playground](http://bpampuch.github.io/pdfmake/playground.html) and [examples](https://github.com/bpampuch/pdfmake/tree/0.1/examples).
 

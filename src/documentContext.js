@@ -159,6 +159,15 @@ DocumentContext.prototype.moveTo = function (x, y) {
 	}
 };
 
+DocumentContext.prototype.moveToRelative = function (x, y) {
+	if (x !== undefined && x !== null) {
+		this.x = this.x + x;
+	}
+	if (y !== undefined && y !== null) {
+		this.y = this.y + y;
+	}
+};
+
 DocumentContext.prototype.beginDetachedBlock = function () {
 	this.snapshots.push({
 		x: this.x,
@@ -246,7 +255,7 @@ DocumentContext.prototype.moveToNextPage = function (pageOrientation) {
 
 
 DocumentContext.prototype.addPage = function (pageSize) {
-	var page = {items: [], pageSize: pageSize};
+	var page = { items: [], pageSize: pageSize };
 	this.pages.push(page);
 	this.backgroundLength.push(0);
 	this.page = this.pages.length - 1;
